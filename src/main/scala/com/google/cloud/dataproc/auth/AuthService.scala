@@ -24,7 +24,10 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.stream.{ActorMaterializer, Materializer}
 import com.google.api.services.compute.model.Instance
+import com.google.api.services.dataproc.model.Cluster
+import com.google.cloud.dataproc.auth.ApiQuery.ClusterFilter
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 object AuthService {
@@ -62,12 +65,29 @@ object AuthService {
       encodeResponseWith(Gzip,NoCoding){
         extractClientIP{ip =>
           entity(as[String]){tokenEnc =>
+            import scala.collection.JavaConverters._
             val id = EnhancedIdToken(tokenEnc)
             if (id.verify(audience) && id.maxAge(maxAgeSeconds)){
               val instance = ApiQuery.getInstance(projectId, zone, id.instanceName, id.zone)
                 .find(hasIp(ip,_))
               if (instance.isDefined) {
-                getFromDirectory(dir)
+                val clusterName = instance.get.getMetadata.getItems.asScala.find(_.getKey ==
+                  "goog-dataproc-cluster-name").map(_.getValue)
+                if (clusterName.isDefined){
+                  val clusterFilter = ClusterFilter(clusterName = clusterName.get)
+                  val cluster = ApiQuery.listClusters(zone.dropRight(2), id.projectId,
+                    clusterFilter, new ArrayBuffer[Cluster](1)).headOption
+                  if (cluster.isDefined){
+                    val instances: Set[String] = (
+                      cluster.get.getConfig.getSecondaryWorkerConfig.getInstanceNames.asScala ++
+                      cluster.get.getConfig.getMasterConfig.getInstanceNames.asScala ++
+                      cluster.get.getConfig.getWorkerConfig.getInstanceNames.asScala
+                    ).toSet
+                    if (instances.contains(id.instanceName)) {
+                      getFromDirectory(dir)
+                    } else reject(AuthorizationFailedRejection)
+                  } else reject(AuthorizationFailedRejection)
+                } else reject(AuthorizationFailedRejection)
               } else reject(AuthorizationFailedRejection)
             } else reject(AuthorizationFailedRejection)
           }
