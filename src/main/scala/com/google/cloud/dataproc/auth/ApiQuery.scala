@@ -44,12 +44,14 @@ object ApiQuery {
   }
 
   case class ComputeFilter(name: String = "",
+                           id: String = "",
                            labelName: String = "",
                            labelValue: String = "",
                            status: String = "") {
     override def toString: String = {
       Seq(Option(status).filter(_.nonEmpty).map(x => s"(status = $x)"),
         Option(name).filter(_.nonEmpty).map(x => s"(name = $x)"),
+        Option(id).filter(_.nonEmpty).map(x => s"(id = $x)"),
         Option((labelName,labelValue)).filter(x => x._1.nonEmpty && x._2.nonEmpty)
           .map(x => s"(labels.${x._1} = ${x._2})")).flatten.mkString(" AND ")
     }
@@ -98,6 +100,16 @@ object ApiQuery {
     val projectId = cluster.getProjectId
     val zone = cluster.getConfig.getGceClusterConfig.getZoneUri.split("/").last
     listNodes(projectId, zone, ComputeFilter.forCluster(cluster.getClusterName), buf)
+  }
+
+  def getInstance(projectId: String,
+                  zone: String,
+                  instanceId: String,
+                  instanceName: String,
+                  buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](1))
+  : Option[Instance] = {
+    val filter = ComputeFilter.Running.copy(name = instanceName, id = instanceId)
+    listNodes(projectId, zone, filter).headOption
   }
 
   def getInstancesByAge(projectId: String,

@@ -39,7 +39,7 @@ object AuthService {
   def run(config: AuthServiceConfig)
          (implicit sys: ActorSystem, mat: ActorMaterializer, ctx: ExecutionContext): Unit = {
     import config._
-    val handler = handle(dir, config.browseable, projectId, zone, maxAgeSeconds)
+    val handler = handle(dir, projectId, zone, maxAgeSeconds, config.audience)
     val server = Http().bindAndHandle(handler, interface, port)
     System.out.println(s"Listening on $interface:$port")
   }
@@ -52,17 +52,25 @@ object AuthService {
   def hasIp(ip: RemoteAddress, instance: Instance): Boolean =
     hasIp(ip.toOption.map(_.getHostAddress).getOrElse(""), instance)
 
-  def handle(dir: String, browseable: Boolean, projectId: String, zone: String, maxAgeSeconds: Long)
+  def handle(dir: String,
+             projectId: String,
+             zone: String,
+             maxAgeSeconds: Long,
+             audience: String)
             (implicit sys: ActorSystem, mat: Materializer, ctx: ExecutionContext): Route = {
     decodeRequestWith(Gzip,NoCoding){
       encodeResponseWith(Gzip,NoCoding){
         extractClientIP{ip =>
-          val instance = ApiQuery.getInstancesByAge(projectId, zone, maxAgeSeconds)
-            .find(hasIp(ip,_))
-          if (instance.isDefined) {
-            if (browseable) getFromBrowseableDirectory(dir)
-            else getFromDirectory(dir)
-          } else reject(AuthorizationFailedRejection)
+          entity(as[String]){tokenEnc =>
+            val id = EnhancedIdToken(tokenEnc)
+            if (id.verify(audience) && id.maxAge(maxAgeSeconds)){
+              val instance = ApiQuery.getInstance(projectId, zone, id.instanceName, id.zone)
+                .find(hasIp(ip,_))
+              if (instance.isDefined) {
+                getFromDirectory(dir)
+              } else reject(AuthorizationFailedRejection)
+            } else reject(AuthorizationFailedRejection)
+          }
         }
       }
     }

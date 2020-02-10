@@ -26,6 +26,7 @@ object AuthServiceConfig {
       dir = sys.env("APP_DIR"),
       projectId = sys.env("PROJECT"),
       zone = sys.env("ZONE"),
+      audience = sys.env("AUDIENCE"),
       maxAgeSeconds = sys.env.getOrElse("MAX_AGE", "300").toInt
     ).validate()
 }
@@ -36,7 +37,7 @@ case class AuthServiceConfig(interface: String = "",
                              projectId: String = "",
                              zone: String = "",
                              maxAgeSeconds: Int = -1,
-                             browseable: Boolean = false) {
+                             audience: String = "") {
   def validate(): AuthServiceConfig = {
     require(Files.isDirectory(Paths.get(dir)), s"APP_DIR must be a directory")
     require(Files.isReadable(Paths.get(dir)), s"APP_DIR must be readable")

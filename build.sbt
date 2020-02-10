@@ -37,6 +37,7 @@ libraryDependencies ++= Seq(
   //"com.github.scopt" %% "scopt" % "3.7.1",
   "com.google.apis" % "google-api-services-dataproc" % "v1-rev147-1.25.0",
   "com.google.http-client" % "google-http-client-apache-v2" % "1.34.1",
+  "com.google.oauth-client" % "google-oauth-client" % "1.30.5",
   "com.google.cloud" % "google-cloud-compute" % "0.117.0-alpha",
   //"com.google.cloud" % "google-cloud-storage" % "1.103.1",
   //"com.google.protobuf" % "protobuf-java" % "3.11.3",
