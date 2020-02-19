@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 organization := "com.google.cloud"
-
 name := "dataproc-init-auth"
+version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.11.12"
 
-version := "0.1.0-SNAPSHOT"
 
 val exGuava = ExclusionRule(organization = "com.google.guava")
 
@@ -49,7 +48,7 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.5" % Test
 ).map(_ excludeAll exGuava)
 
-mainClass in assembly := Some("com.google.cloud.example.DataprocInitAuth")
+mainClass in assembly := Some("com.google.cloud.dataproc.auth.AuthService")
 
 assemblyJarName in assembly := "dpa-assembly.jar"
 assemblyJarName in assemblyPackageDependency := "dpa-dep.jar"
@@ -59,7 +58,9 @@ test in assembly := Seq()
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", _) => MergeStrategy.discard
-  case _ => MergeStrategy.first
+  case "application.conf"      => MergeStrategy.concat
+  case "reference.conf"        => MergeStrategy.concat
+  case _                       => MergeStrategy.first
 }
 
 publishMavenStyle := false

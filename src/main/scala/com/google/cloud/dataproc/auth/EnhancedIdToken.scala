@@ -36,7 +36,8 @@ class EnhancedIdToken(val idToken: IdToken){
   def zone: String = m.get("zone").asInstanceOf[String]
   def instanceId: String = m.get("instance_id").asInstanceOf[String]
   def instanceName: String = m.get("instance_name").asInstanceOf[String]
-  def instanceCreationTimestamp: Long = m.get("instance_creation_timestamp").asInstanceOf[Long]
+  def instanceCreationTimestamp: Long = m.get("instance_creation_timestamp").asInstanceOf[java
+  .math.BigDecimal].longValueExact()
 
   def verify(audience: String): Boolean = {
     val aud = idToken.verifyAudience(Collections.singleton(audience))

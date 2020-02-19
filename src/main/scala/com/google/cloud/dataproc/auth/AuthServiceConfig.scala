@@ -23,7 +23,7 @@ object AuthServiceConfig {
     AuthServiceConfig(
       interface = sys.env.getOrElse("BIND_ADDR", "localhost"),
       port = sys.env.getOrElse("BIND_PORT", "8080").toInt,
-      dir = sys.env("APP_DIR"),
+      dir = sys.env.getOrElse("APP_DIR", "."),
       projectId = sys.env("PROJECT"),
       zone = sys.env("ZONE"),
       audience = sys.env("AUDIENCE"),
