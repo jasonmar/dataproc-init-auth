@@ -47,6 +47,5 @@ class EnhancedIdToken(val idToken: IdToken){
     aud && iss && time && exp
   }
 
-  def maxAge(seconds: Long): Boolean =
-    instanceCreationTimestamp > ((System.currentTimeMillis/1000) - seconds)
+  lazy val age: Long = (System.currentTimeMillis/1000) - instanceCreationTimestamp
 }

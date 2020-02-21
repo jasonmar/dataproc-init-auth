@@ -35,10 +35,12 @@ object ApiQuery {
     "name", "zone", "networkInterfaces",
     "metadata", "labels", "hostname")
 
+  val ClusterLabel = "dataproc-cluster-name"
+
   object ComputeFilter {
     final val Running: ComputeFilter = ComputeFilter(status = "RUNNING")
     def forCluster(clusterName: String): ComputeFilter =
-      Running.copy(labelName = "goog-dataproc-cluster-name",
+      Running.copy(labelName = ClusterLabel,
                     labelValue = clusterName)
 
   }
@@ -96,7 +98,8 @@ object ApiQuery {
   }
 
   def getComputeNodes(cluster: Cluster,
-                      buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](128)): ArrayBuffer[Instance] = {
+                      buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](128))
+  : ArrayBuffer[Instance] = {
     val projectId = cluster.getProjectId
     val zone = cluster.getConfig.getGceClusterConfig.getZoneUri.split("/").last
     listNodes(projectId, zone, ComputeFilter.forCluster(cluster.getClusterName), buf)
@@ -104,20 +107,20 @@ object ApiQuery {
 
   def getInstance(projectId: String,
                   zone: String,
-                  instanceId: String,
                   instanceName: String,
                   buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](1))
   : Option[Instance] = {
-    val filter = ComputeFilter.Running.copy(name = instanceName, id = instanceId)
+    val filter = ComputeFilter.Running.copy(name = instanceName)
     listNodes(projectId, zone, filter).headOption
   }
 
   def getInstancesByAge(projectId: String,
                         zone: String,
                         maxAgeSeconds: Long,
-                        buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](128)): ArrayBuffer[Instance] = {
+                        buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](128))
+  : Array[Instance] = {
     val now = LocalDateTime.now
-    listNodes(projectId, zone, ComputeFilter.Running, buf)
+    listNodes(projectId, zone, ComputeFilter.Running, buf).toArray
       .filter{x => getAge(x,now) < maxAgeSeconds}
   }
 
@@ -126,13 +129,12 @@ object ApiQuery {
                      serviceAccount: String,
                      ipAddress: String,
                      buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](128))
-  : ArrayBuffer[Instance] = {
-    listNodes(projectId, zone, ComputeFilter.Running, buf)
+  : Array[Instance] =
+    listNodes(projectId, zone, ComputeFilter.Running, buf).toArray
       .filter{x =>
         x.getNetworkInterfaces.asScala.exists(_.getNetworkIP == ipAddress) &&
         x.getServiceAccounts.asScala.exists(_.getEmail == serviceAccount)
       }
-  }
 
   def getAge(instance: Instance, now: LocalDateTime = LocalDateTime.now()): Long =
     getAge(instance.getCreationTimestamp, now)
@@ -145,7 +147,9 @@ object ApiQuery {
   def listNodes(project: String,
                 zone: String,
                 filter: ComputeFilter = ComputeFilter(),
-                buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](128)): ArrayBuffer[Instance] = {
+                buf: ArrayBuffer[Instance] = new ArrayBuffer[Instance](128))
+  : ArrayBuffer[Instance]
+  = {
     val req = Client.compute.instances.list(project, zone)
       .setFilter(filter.toString)
     var pageToken = Option("")
